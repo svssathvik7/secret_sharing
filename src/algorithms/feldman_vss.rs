@@ -1,3 +1,5 @@
+use std::thread;
+
 use num_bigint::BigInt;
 
 use super::shamir_secret_sharing::ShamirSecretSharing;
@@ -44,10 +46,22 @@ impl FeldmanVSS{
     // generate Ci committments for verification of shares
     fn generate_committments(&mut self){
         let coefficients = &self.shamir.coefficients;
-        let mut committments: Vec<BigInt> = Vec::new();
+        let mut handles = vec![];
         for i in 0..coefficients.len(){
+            // parallelizing - efficient for larger thresholds
+            let generator = self.generator.clone();
+            let coefficient = coefficients[i].clone();
+            let prime = self.shamir.prime.clone();
             // g^ai
-            committments.push(self.generator.modpow(&coefficients[i],&self.shamir.prime));
+            handles.push(thread::spawn(move || {
+                generator.modpow(&coefficient, &prime)
+            }));
+        }
+    
+        let mut committments = Vec::new();
+        for handle in handles {
+            let commitment = handle.join().unwrap();
+            committments.push(commitment);
         }
         self.committments = committments;
     }

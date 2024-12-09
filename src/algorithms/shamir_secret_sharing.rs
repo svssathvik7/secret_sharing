@@ -74,17 +74,6 @@ impl ShamirSecretSharing{
         self.coefficients = coefficients;
     }
 
-    // calculate y by f(x)
-    fn calculate_y(&self,x: usize) -> BigInt{
-        let coefficients = &self.coefficients;
-        let x_value = BigInt::from(x);
-        let mut result = BigInt::from(0);
-        for (i,coeff) in coefficients.iter().enumerate(){
-            result = result + (coeff*x_value.pow(i as u32));
-        }
-        result
-    }
-
     // lagrange interpolation to reconstruct poly from t shares
     pub fn lagrange_interpolation(&self,xs:Vec<usize>,ys:Vec<BigInt>) -> BigInt{
         let mut secret = BigInt::from(0);
