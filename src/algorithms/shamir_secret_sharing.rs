@@ -1,4 +1,5 @@
 use num_bigint::{BigInt, RandBigInt};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::thread;
 
 #[derive(Debug)]
@@ -45,25 +46,36 @@ impl ShamirSecretSharing {
 
         // update self.coefficients
         self.generate_coefficients(secret);
-        let mut handles = vec![];
-        for i in 1..=self.total_shares {
-            let coefficients = self.coefficients.clone();
-            handles.push(thread::spawn(move || {
+        let mut shares = Vec::new();
+        // use serial processing
+        if self.total_shares <= 10 {
+            for i in 1..=self.total_shares {
+                shares.push((i, self.calculate_y(i)));
+            }
+            Ok(shares)
+        } else {
+            // larger shares need thread pool
+            shares = (1..=self.total_shares).into_par_iter().map(|i|{
                 let x_value = BigInt::from(i);
                 let mut result = BigInt::from(0);
-                for (i, coeff) in coefficients.iter().enumerate() {
+                for (i, coeff) in self.coefficients.iter().enumerate() {
                     result = result + (coeff * x_value.pow(i as u32));
                 }
                 (i, result)
-            }));
+            }).collect();
+            Ok(shares)
         }
+    }
 
-        let mut shares = Vec::new();
-        for handle in handles {
-            let share = handle.join().unwrap();
-            shares.push(share);
+    // calculate y for f(i)
+    fn calculate_y(&self, x: usize) -> BigInt {
+        let coefficients = &self.coefficients;
+        let x_value = BigInt::from(x);
+        let mut result = BigInt::from(0);
+        for (i, coeff) in coefficients.iter().enumerate() {
+            result = result + (coeff * x_value.pow(i as u32));
         }
-        Ok(shares)
+        result
     }
 
     // generate random coefficients of the polynomial with [1,prime)

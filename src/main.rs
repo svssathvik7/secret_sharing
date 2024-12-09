@@ -4,7 +4,7 @@ pub mod algorithms;
 fn main() {
     let threshold = 2;
     let secret = BigInt::from(786);
-    let total_shares = 5;
+    let total_shares = 50;
     let mut shamir = ShamirSecretSharing::new(threshold, total_shares, None).unwrap();
     let shares = shamir.generate_shares(secret.clone()).unwrap();
     println!("----------------Shamir Secret Sharing----------------");
