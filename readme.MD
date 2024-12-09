@@ -21,3 +21,19 @@ This project implements **Shamir's Secret Sharing (SSS)** and **Feldman Verifiab
   - Generate shares for small or large secrets.
 
 ![High level class diagram](class_diagram.png)
+
+
+## Installation
+- **Clone the repository:**
+```bash
+git clone https://github.com/svssathvik7/secret_sharing.git
+cd secret_sharing
+```
+- **Add dependencies to your** `Cargo.toml`: Make sure to include necessary `dependencies` in the `[dependencies]` section of your `Cargo.toml`:
+
+```toml
+[dependencies]
+rand = "0.8"
+num-bigint = "0.4"
+num-traits = "0.2"
+```
