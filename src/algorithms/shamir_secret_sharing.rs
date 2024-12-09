@@ -1,3 +1,4 @@
+use std::thread;
 use num_bigint::{BigInt, RandBigInt};
 
 #[derive(Debug)]
@@ -40,11 +41,23 @@ impl ShamirSecretSharing{
 
         // update self.coefficients
         self.generate_coefficients(secret);
-
-        let mut shares: Vec<(usize,BigInt)> = Vec::new();
-        // share = (i,v) on the polynomial
-        for i in 1..=self.total_shares{
-            shares.push((i,self.calculate_y( i)));
+        let mut handles = vec![];
+        for i in 1..=self.total_shares {
+            let coefficients = self.coefficients.clone();
+            handles.push(thread::spawn(move || {
+                let x_value = BigInt::from(i);
+                let mut result = BigInt::from(0);
+                for (i, coeff) in coefficients.iter().enumerate() {
+                    result = result + (coeff * x_value.pow(i as u32));
+                }
+                (i, result)
+            }));
+        }
+    
+        let mut shares = Vec::new();
+        for handle in handles {
+            let share = handle.join().unwrap();
+            shares.push(share);
         }
         Ok(shares)
     }
@@ -200,7 +213,7 @@ mod tests {
 
         // Reconstruct secret using the threshold number of shares
         let reconstructed_secret = {
-            let mut shamir = ShamirSecretSharing::new(threshold, total_shares, None).unwrap();
+            let shamir = ShamirSecretSharing::new(threshold, total_shares, None).unwrap();
             shamir.reconstruct(&shares[0..threshold].to_vec()).unwrap()
         };
 
