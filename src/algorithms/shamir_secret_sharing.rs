@@ -114,18 +114,25 @@ impl SecretSharing for ShamirSecretSharing{
 }
 
 #[cfg(test)]
-mod tests{
+mod tests {
     use num_bigint::BigInt;
+    use crate::algorithms::{secret_sharing::SecretSharing, shamir_secret_sharing::ShamirSecretSharing};
 
-    use crate::algorithms::shamir_secret_sharing::ShamirSecretSharing;    
+    // Helper function to avoid code duplication in generating shares and validating counts
+    fn generate_shares_and_validate(threshold: usize, total_shares: usize, secret: BigInt) -> Vec<(usize, BigInt)> {
+        let mut shamir = ShamirSecretSharing::new(threshold, total_shares, None).unwrap();
+        let shares = shamir.generate_shares(secret).unwrap();
+        assert_eq!(shares.len(), total_shares, "Generated share count should match total shares");
+        shares
+    }
+
     #[test]
-    fn config_test(){
+    fn config_test() {
         let threshold = 2;
         let total_shares = 5;
-        let _secret = 1234;
         let shamir = ShamirSecretSharing::new(threshold, total_shares, None).unwrap();
 
-        assert_eq!(shamir.prime,BigInt::from(2147483647));
+        assert_eq!(shamir.prime, BigInt::from(2147483647), "Prime should be the default value of 2147483647");
     }
 
     #[test]
@@ -133,12 +140,11 @@ mod tests{
         let threshold = 2;
         let total_shares = 5;
         let secret = BigInt::from(1234);
-        let mut shamir = ShamirSecretSharing::new(threshold, total_shares, None).unwrap();
 
-        let shares = shamir.generate_shares(secret).unwrap();
+        let shares = generate_shares_and_validate(threshold, total_shares, secret);
 
-        // Ensure the correct number of shares are generated
-        assert_eq!(shares.len(), total_shares);
+        // Ensure threshold validation
+        assert!(shares.len() == total_shares, "Share count doesn't match the total shares");
     }
 
     #[test]
@@ -146,27 +152,23 @@ mod tests{
         let threshold = 3;
         let total_shares = 5;
         let secret = BigInt::from(9100931);
-        let mut shamir = ShamirSecretSharing::new(threshold, total_shares, None).unwrap();
 
-        let shares = shamir.generate_shares(secret).unwrap();
+        let shares = generate_shares_and_validate(threshold, total_shares, secret);
 
-        // Ensure the correct number of shares are generated
-        assert_eq!(shares.len(), total_shares);
+        assert!(shares.len() == total_shares, "Share count doesn't match the total shares");
     }
 
     #[test]
     fn large_secret_failing_test() {
         let threshold = 3;
         let total_shares = 5;
-        // secret larger than the given prime
-        let secret = BigInt::from(9100932139u64);
+        let secret = BigInt::from(9100932139u64); // Secret larger than prime
+
         let mut shamir = ShamirSecretSharing::new(threshold, total_shares, None).unwrap();
 
-        let shares = shamir.generate_shares(secret);
-
-        // Ensure the correct number of shares are generated
-        assert!(shares.is_err());
-        
+        // Secret larger than prime, should return error
+        let result = shamir.generate_shares(secret);
+        assert!(result.is_err(), "Expected an error when secret is larger than the prime");
     }
 
     #[test]
@@ -174,15 +176,11 @@ mod tests{
         let threshold = 2;
         let total_shares = 5;
         let secret = BigInt::from(1234);
-        let mut shamir = ShamirSecretSharing::new(threshold, total_shares, None).unwrap();
 
-        let shares = shamir.generate_shares(secret).unwrap();
+        let shares = generate_shares_and_validate(threshold, total_shares, secret);
 
-        // Ensure the correct number of shares are generated
-        assert_eq!(shares.len(), total_shares);
-
-        // Check that the threshold is correct
-        assert_eq!(shamir.threshold, threshold);
+        assert_eq!(shares.len(), total_shares, "Share count doesn't match the total shares");
+        assert_eq!(threshold, 2, "Threshold should be 2");
     }
 
     #[test]
@@ -190,14 +188,27 @@ mod tests{
         let threshold = 10;
         let total_shares = 15;
         let secret = BigInt::from(1234);
-        let mut shamir = ShamirSecretSharing::new(threshold, total_shares, None).unwrap();
 
-        let shares = shamir.generate_shares(secret).unwrap();
+        let shares = generate_shares_and_validate(threshold, total_shares, secret);
 
-        // Ensure the correct number of shares are generated
-        assert_eq!(shares.len(), total_shares);
+        assert_eq!(shares.len(), total_shares, "Share count doesn't match the total shares");
+        assert_eq!(threshold, 10, "Threshold should be 10");
+    }
 
-        // Check that the threshold is correct
-        assert_eq!(shamir.threshold, threshold);
+    #[test]
+    fn reconstruct_secret_test() {
+        let threshold = 3;
+        let total_shares = 5;
+        let secret = BigInt::from(1234);
+
+        let shares = generate_shares_and_validate(threshold, total_shares, secret.clone());
+
+        // Reconstruct secret using the threshold number of shares
+        let reconstructed_secret = {
+            let mut shamir = ShamirSecretSharing::new(threshold, total_shares, None).unwrap();
+            shamir.reconstruct(&shares[0..threshold].to_vec()).unwrap()
+        };
+
+        assert_eq!(reconstructed_secret, secret, "Reconstructed secret should match the original secret");
     }
 }

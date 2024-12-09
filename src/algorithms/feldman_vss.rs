@@ -90,20 +90,22 @@ impl SecretSharing for FeldmanVSS{
 #[cfg(test)]
 mod tests {
     use crate::algorithms::{feldman_vss::FeldmanVSS, secret_sharing::SecretSharing};
-
     use num_bigint::BigInt;
+
+    fn create_feldman_vss(threshold: usize, total_shares: usize) -> FeldmanVSS {
+        let prime = BigInt::from(2147483647); // Prime number
+        FeldmanVSS::new(threshold, total_shares, Some(prime)).unwrap()
+    }
 
     #[test]
     fn test_invalid_threshold() {
         let threshold = 6; // Threshold larger than total_shares
         let total_shares = 5;
-        let _secret = BigInt::from(1234);
-        let prime = BigInt::from(2147483647); // Prime number
+        let prime = BigInt::from(2147483647); // default Prime number
 
         let result = FeldmanVSS::new(threshold, total_shares, Some(prime));
-
         // Expecting an error because threshold is larger than total_shares
-        assert!(result.is_err());
+        assert!(result.is_err(), "Expected an error due to threshold being larger than total shares");
     }
 
     #[test]
@@ -111,21 +113,18 @@ mod tests {
         let threshold = 3;
         let total_shares = 5;
         let secret = BigInt::from(1234);
-        let prime = BigInt::from(2147483647); // Prime number
+        let mut vss = create_feldman_vss(threshold, total_shares);
 
-        let mut vss = FeldmanVSS::new(threshold, total_shares, Some(prime)).unwrap();
-
-        // Generate shares and commitments
         let response = vss.generate_shares(secret.clone()).unwrap();
 
         // Check that the number of shares matches the total shares requested
-        assert_eq!(response.shares.len(), total_shares);
-
+        assert_eq!(response.shares.len(), total_shares, "Number of shares should match total_shares");
+        
         // Check that the number of commitments matches the threshold
-        assert_eq!(response.committments.len(), threshold);
+        assert_eq!(response.committments.len(), threshold, "Number of commitments should match threshold");
 
         // Ensure the commitments are non-empty
-        assert!(!response.committments.is_empty());
+        assert!(!response.committments.is_empty(), "Commitments should not be empty");
     }
 
     #[test]
@@ -133,15 +132,13 @@ mod tests {
         let threshold = 3;
         let total_shares = 5;
         let secret = BigInt::from(1234);
-        let prime = BigInt::from(2147483647); // Prime number
-
-        let mut vss = FeldmanVSS::new(threshold, total_shares, Some(prime)).unwrap();
+        let mut vss = create_feldman_vss(threshold, total_shares);
         let response = vss.generate_shares(secret.clone()).unwrap();
         let share = response.shares[0].clone();
 
         // Validate the first share
         let is_valid = vss.validate_shares(share);
-        assert!(is_valid);
+        assert!(is_valid, "The share should be valid");
     }
 
     #[test]
@@ -149,18 +146,16 @@ mod tests {
         let threshold = 3;
         let total_shares = 5;
         let secret = BigInt::from(1234);
-        let prime = BigInt::from(2147483647); // Prime number
-
-        let mut vss = FeldmanVSS::new(threshold, total_shares, Some(prime)).unwrap();
+        let mut vss = create_feldman_vss(threshold, total_shares);
         let response = vss.generate_shares(secret.clone()).unwrap();
 
         // Create an invalid share by modifying the value
         let mut invalid_share = response.shares[0].clone();
         invalid_share.1 += 1; // Invalid modification to the share value
-        println!("{}",invalid_share.1);
+
         // Validate the invalid share
         let is_valid = vss.validate_shares(invalid_share);
-        assert!(!is_valid);
+        assert!(!is_valid, "The modified share should be invalid");
     }
 
     #[test]
@@ -168,15 +163,54 @@ mod tests {
         let threshold = 3;
         let total_shares = 5;
         let secret = BigInt::from(1234);
-        let prime = BigInt::from(2147483647); // Prime number
-
-        let mut vss = FeldmanVSS::new(threshold, total_shares, Some(prime)).unwrap();
+        let mut vss = create_feldman_vss(threshold, total_shares);
         let response = vss.generate_shares(secret.clone()).unwrap();
 
         // Reconstruct the secret using the first `threshold` number of shares
-        let reconstructed_secret = vss.reconstruct(&response.shares).unwrap();
+        let reconstructed_secret = vss.reconstruct(&response.shares[0..threshold].to_vec()).unwrap();
 
         // Ensure the reconstructed secret matches the original secret
-        assert_eq!(reconstructed_secret, secret);
+        assert_eq!(reconstructed_secret, secret, "Reconstructed secret should match the original secret");
+    }
+
+    #[test]
+    fn test_threshold_equals_shares() {
+        let threshold = 5;
+        let total_shares = 5;
+        let secret = BigInt::from(1234);
+        let mut vss = create_feldman_vss(threshold, total_shares);
+        
+        // Generate shares and validate that they are valid
+        let response = vss.generate_shares(secret.clone()).unwrap();
+        for share in response.shares {
+            assert!(vss.validate_shares(share), "All shares should be valid when threshold equals total shares");
+        }
+    }
+
+    #[test]
+    fn test_edge_case_single_share() {
+        let threshold = 1;
+        let total_shares = 1;
+        let secret = BigInt::from(1234);
+        let mut vss = create_feldman_vss(threshold, total_shares);
+        
+        // Generate shares and validate that the single share is valid
+        let response = vss.generate_shares(secret.clone()).unwrap();
+        assert_eq!(response.shares.len(), total_shares, "Only one share should be generated");
+
+        let share = response.shares[0].clone();
+        assert!(vss.validate_shares(share), "The single share should be valid");
+    }
+
+    #[test]
+    fn test_invalid_reconstruction_with_fewer_shares() {
+        let threshold = 3;
+        let total_shares = 5;
+        let secret = BigInt::from(1234);
+        let mut vss = create_feldman_vss(threshold, total_shares);
+        let response = vss.generate_shares(secret.clone()).unwrap();
+        // Try to reconstruct the secret with fewer than the required shares
+        let reconstructed_secret = vss.reconstruct(&response.shares[0..threshold - 1].to_vec());
+        assert!(reconstructed_secret.is_err(), "Reconstruction should fail with fewer than `threshold` shares");
     }
 }
