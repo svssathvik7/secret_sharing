@@ -20,6 +20,7 @@ This project implements **Shamir's Secret Sharing (SSS)** and **Feldman Verifiab
   - Specify the threshold, number of shares, and prime number for modular arithmetic.
   - Generate shares for small or large secrets.
 
+## High level class diagram
 ![High level class diagram](class_diagram.png)
 
 
