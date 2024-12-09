@@ -1,6 +1,6 @@
 use num_bigint::BigInt;
 
-use super::{secret_sharing::SecretSharing, shamir_secret_sharing::ShamirSecretSharing};
+use super::shamir_secret_sharing::ShamirSecretSharing;
 
 #[derive(Debug)]
 pub struct FeldmanResponse{
@@ -79,17 +79,15 @@ impl FeldmanVSS{
         }
         lhs == rhs
     }
-}
-
-impl SecretSharing for FeldmanVSS{
-    fn reconstruct(&self, shares: &Vec<(usize, BigInt)>) -> Result<BigInt, String> {
+    pub fn reconstruct(&self, shares: &Vec<(usize, BigInt)>) -> Result<BigInt, String> {
         self.shamir.reconstruct(shares)
     }
 }
 
+
 #[cfg(test)]
 mod tests {
-    use crate::algorithms::{feldman_vss::FeldmanVSS, secret_sharing::SecretSharing};
+    use crate::algorithms::feldman_vss::FeldmanVSS;
     use num_bigint::BigInt;
 
     fn create_feldman_vss(threshold: usize, total_shares: usize) -> FeldmanVSS {

@@ -1,4 +1,4 @@
-use algorithms::{feldman_vss::FeldmanVSS, secret_sharing::SecretSharing, shamir_secret_sharing::ShamirSecretSharing};
+use algorithms::{feldman_vss::FeldmanVSS,shamir_secret_sharing::ShamirSecretSharing};
 use num_bigint::BigInt;
 pub mod algorithms;
 fn main(){

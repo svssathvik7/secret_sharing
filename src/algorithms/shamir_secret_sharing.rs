@@ -1,7 +1,5 @@
 use num_bigint::{BigInt, RandBigInt};
 
-use super::secret_sharing::SecretSharing;
-
 #[derive(Debug)]
 pub struct ShamirSecretSharing{
     pub threshold: usize,
@@ -98,11 +96,7 @@ impl ShamirSecretSharing{
             secret % &self.prime
         }
     }
-}
-
-impl SecretSharing for ShamirSecretSharing{
-
-    fn reconstruct(&self,shares:&Vec<(usize,BigInt)>) -> Result<BigInt,String>{
+    pub fn reconstruct(&self,shares:&Vec<(usize,BigInt)>) -> Result<BigInt,String>{
         if shares.len() < self.threshold{
             return Err("Require atleast ".to_string() + &self.threshold.to_string() + " shares");
         }
@@ -113,10 +107,11 @@ impl SecretSharing for ShamirSecretSharing{
     }
 }
 
+
 #[cfg(test)]
 mod tests {
     use num_bigint::BigInt;
-    use crate::algorithms::{secret_sharing::SecretSharing, shamir_secret_sharing::ShamirSecretSharing};
+    use crate::algorithms::shamir_secret_sharing::ShamirSecretSharing;
 
     // Helper function to avoid code duplication in generating shares and validating counts
     fn generate_shares_and_validate(threshold: usize, total_shares: usize, secret: BigInt) -> Vec<(usize, BigInt)> {
