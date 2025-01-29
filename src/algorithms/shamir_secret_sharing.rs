@@ -1,6 +1,5 @@
 use num_bigint::{BigInt, RandBigInt};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use std::thread;
 
 #[derive(Debug)]
 pub struct ShamirSecretSharing {
@@ -55,14 +54,17 @@ impl ShamirSecretSharing {
             Ok(shares)
         } else {
             // larger shares need thread pool
-            shares = (1..=self.total_shares).into_par_iter().map(|i|{
-                let x_value = BigInt::from(i);
-                let mut result = BigInt::from(0);
-                for (i, coeff) in self.coefficients.iter().enumerate() {
-                    result = result + (coeff * x_value.pow(i as u32));
-                }
-                (i, result)
-            }).collect();
+            shares = (1..=self.total_shares)
+                .into_par_iter()
+                .map(|i| {
+                    let x_value = BigInt::from(i);
+                    let mut result = BigInt::from(0);
+                    for (i, coeff) in self.coefficients.iter().enumerate() {
+                        result = result + (coeff * x_value.pow(i as u32));
+                    }
+                    (i, result)
+                })
+                .collect();
             Ok(shares)
         }
     }

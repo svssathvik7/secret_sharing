@@ -1,7 +1,7 @@
-use std::thread;
+use rayon::prelude::*;
 
 use num_bigint::BigInt;
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use rayon::iter::IntoParallelIterator;
 
 use super::shamir_secret_sharing::ShamirSecretSharing;
 
@@ -51,27 +51,10 @@ impl FeldmanVSS {
     // generate Ci committments for verification of shares
     fn generate_committments(&mut self) {
         let coefficients = &self.shamir.coefficients;
-        // let mut handles = vec![];
-        // for i in 0..coefficients.len() {
-        //     // parallelizing - efficient for larger thresholds
-        //     let generator = self.generator.clone();
-        //     let coefficient = coefficients[i].clone();
-        //     let prime = self.shamir.prime.clone();
-        //     // g^ai
-        //     handles.push(thread::spawn(move || {
-        //         generator.modpow(&coefficient, &prime)
-        //     }));
-        // }
-
-        let committments = 
-        committments = (0..coefficients.len()).into_par_iter().map(|i|{
-            self.generator.modpow(&coefficients[i], &self.shamir.prime)
-        }).collect();
-        for handle in handles {
-            let commitment = handle.join().unwrap();
-            committments.push(commitment);
-        }
-        self.committments = committments;
+        self.committments = (0..coefficients.len())
+            .into_par_iter()
+            .map(|i| self.generator.modpow(&coefficients[i], &self.shamir.prime))
+            .collect();
     }
 
     // call sss share generation logic
